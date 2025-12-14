@@ -11,6 +11,9 @@ Profesjonalny bot do tradingu w Pythonie z obsługą strategii opartych na anali
 - 🔄 **RSI** - Relative Strength Index (oversold/overbought)
 - 📐 **MACD** - Moving Average Convergence Divergence
 - 🚀 **Donchian Breakout** - Channel breakout strategy
+- 💪 **ADX Trend** - EMA + ADX trend strength filter (NEW)
+- 📢 **Volume Breakout** - Donchian + volume spike confirmation (NEW)
+- 🔃 **Mean Reversion Z-Score** - Z-score based mean reversion (NEW)
 
 ### Wskaźniki techniczne
 - SMA, EMA (proste i wykładnicze średnie)
@@ -21,6 +24,14 @@ Profesjonalny bot do tradingu w Pythonie z obsługą strategii opartych na anali
 - Donchian Channel
 - VWAP (Volume Weighted Average Price)
 - Z-score, percentyle zmienności
+- **ADX** (Average Directional Index) - siła trendu (NEW)
+- **SuperTrend** - trailing stop indicator (NEW)
+- **OBV** (On Balance Volume) - analiza wolumenu (NEW)
+- **Keltner Channel** - kanał ATR-based (NEW)
+- **Price Action** - HH/HL/LH/LL patterns (NEW)
+- **Realized Volatility** - historyczna zmienność (NEW)
+- **RVOL** (Relative Volume) - wolumen względny (NEW)
+- **VWAP Deviation** - odchylenie od VWAP w bps (NEW)
 
 ### Guardy i filtry bezpieczeństwa
 - 🛡️ **Spread Guard** - Blokuje trading przy zbyt szerokim spreadzie

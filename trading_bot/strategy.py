@@ -232,7 +232,7 @@ class RSIStrategy(TradingStrategy):
     
     @property
     def name(self) -> str:
-        return f"RSI_{self.period}_{self.oversold_level}_{self.overbought_level}"
+        return f"RSI_{self.period}_{int(self.oversold_level)}_{int(self.overbought_level)}"
     
     def _calculate_rsi(self, candles: List[Candle]) -> Optional[float]:
         if len(candles) < self.period + 1:
@@ -388,5 +388,238 @@ class MACDStrategy(TradingStrategy):
             return Signal.BUY
         elif macd_prev >= signal_prev and macd_now < signal_now:
             return Signal.SELL
+        
+        return Signal.HOLD
+
+
+class ADXTrendStrategy(TradingStrategy):
+    """
+    EMA + ADX strategy (trend with strength filter).
+    
+    BUY when EMA fast > EMA slow + ADX > threshold.
+    SELL when EMA fast < EMA slow + ADX > threshold.
+    HOLD when ADX < threshold (no clear trend).
+    """
+    
+    def __init__(
+        self,
+        ema_fast: int = 9,
+        ema_slow: int = 21,
+        adx_period: int = 14,
+        adx_threshold: float = 20.0
+    ):
+        if ema_fast <= 0 or ema_slow <= 0 or adx_period <= 0:
+            raise ValueError("All periods must be positive integers")
+        if ema_fast >= ema_slow:
+            raise ValueError("ema_fast must be less than ema_slow")
+        if adx_threshold <= 0:
+            raise ValueError("adx_threshold must be positive")
+        
+        self.ema_fast = ema_fast
+        self.ema_slow = ema_slow
+        self.adx_period = adx_period
+        self.adx_threshold = adx_threshold
+    
+    @property
+    def name(self) -> str:
+        return f"ADXTrend_{self.ema_fast}_{self.ema_slow}_{self.adx_period}"
+    
+    def _calculate_ema(self, prices: List[float], period: int) -> Optional[float]:
+        if len(prices) < period:
+            return None
+        
+        k = 2 / (period + 1)
+        ema = sum(prices[:period]) / period
+        
+        for price in prices[period:]:
+            ema = price * k + ema * (1 - k)
+        
+        return ema
+    
+    def _calculate_adx(self, candles: List[Candle]) -> Optional[float]:
+        """Calculates ADX (simplified DX-based approximation)."""
+        if len(candles) < self.adx_period * 2:
+            return None
+        
+        plus_dm_list = []
+        minus_dm_list = []
+        tr_list = []
+        
+        for i in range(1, len(candles)):
+            high = candles[i].high
+            low = candles[i].low
+            prev_high = candles[i-1].high
+            prev_low = candles[i-1].low
+            prev_close = candles[i-1].close
+            
+            tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
+            tr_list.append(tr)
+            
+            plus_dm = max(high - prev_high, 0) if (high - prev_high) > (prev_low - low) else 0
+            minus_dm = max(prev_low - low, 0) if (prev_low - low) > (high - prev_high) else 0
+            
+            plus_dm_list.append(plus_dm)
+            minus_dm_list.append(minus_dm)
+        
+        if len(tr_list) < self.adx_period:
+            return None
+        
+        # Simple sum over period (simplified calculation)
+        smoothed_tr = sum(tr_list[-self.adx_period:])
+        smoothed_plus = sum(plus_dm_list[-self.adx_period:])
+        smoothed_minus = sum(minus_dm_list[-self.adx_period:])
+        
+        if smoothed_tr == 0:
+            return None
+        
+        plus_di = (smoothed_plus / smoothed_tr) * 100
+        minus_di = (smoothed_minus / smoothed_tr) * 100
+        
+        di_sum = plus_di + minus_di
+        if di_sum == 0:
+            return None
+        
+        # DX (used as simplified ADX indicator)
+        dx = abs(plus_di - minus_di) / di_sum * 100
+        return dx
+    
+    def analyze(self, candles: List[Candle]) -> Signal:
+        if len(candles) < max(self.ema_slow, self.adx_period * 2) + 1:
+            return Signal.HOLD
+        
+        closes = [c.close for c in candles]
+        
+        ema_fast_val = self._calculate_ema(closes, self.ema_fast)
+        ema_slow_val = self._calculate_ema(closes, self.ema_slow)
+        adx = self._calculate_adx(candles)
+        
+        if None in (ema_fast_val, ema_slow_val, adx):
+            return Signal.HOLD
+        
+        # ADX filter - sygnały tylko przy silnym trendzie
+        if adx < self.adx_threshold:
+            return Signal.HOLD
+        
+        if ema_fast_val > ema_slow_val:
+            return Signal.BUY
+        elif ema_fast_val < ema_slow_val:
+            return Signal.SELL
+        
+        return Signal.HOLD
+
+
+class VolumeBreakoutStrategy(TradingStrategy):
+    """
+    Strategia Donchian Breakout z potwierdzeniem wolumenem.
+    
+    BUY gdy cena przebije górną granicę + Volume spike > p90.
+    SELL gdy cena przebije dolną granicę + Volume spike > p90.
+    """
+    
+    def __init__(
+        self,
+        donchian_period: int = 20,
+        volume_lookback: int = 20,
+        volume_percentile: float = 90.0
+    ):
+        if donchian_period <= 0 or volume_lookback <= 0:
+            raise ValueError("Okresy muszą być dodatnimi liczbami całkowitymi")
+        if not (0 < volume_percentile <= 100):
+            raise ValueError("volume_percentile musi być w zakresie (0, 100]")
+        
+        self.donchian_period = donchian_period
+        self.volume_lookback = volume_lookback
+        self.volume_percentile = volume_percentile
+    
+    @property
+    def name(self) -> str:
+        return f"VolumeBreakout_{self.donchian_period}_{int(self.volume_percentile)}"
+    
+    def _check_volume_spike(self, candles: List[Candle]) -> bool:
+        if len(candles) < self.volume_lookback:
+            return False
+        
+        volumes = [c.volume for c in candles[-self.volume_lookback:]]
+        current_volume = candles[-1].volume
+        
+        count_below = sum(1 for v in volumes[:-1] if v < current_volume)
+        percentile = (count_below / (len(volumes) - 1)) * 100
+        
+        return percentile >= self.volume_percentile
+    
+    def analyze(self, candles: List[Candle]) -> Signal:
+        if len(candles) < max(self.donchian_period + 1, self.volume_lookback):
+            return Signal.HOLD
+        
+        # Donchian channel z poprzednich świec
+        lookback = candles[-(self.donchian_period + 1):-1]
+        upper = max(c.high for c in lookback)
+        lower = min(c.low for c in lookback)
+        
+        current_price = candles[-1].close
+        has_volume_spike = self._check_volume_spike(candles)
+        
+        # Breakout z potwierdzeniem wolumenem
+        if current_price > upper and has_volume_spike:
+            return Signal.BUY
+        elif current_price < lower and has_volume_spike:
+            return Signal.SELL
+        
+        return Signal.HOLD
+
+
+class MeanReversionZScoreStrategy(TradingStrategy):
+    """
+    Strategia mean reversion oparta na Z-score.
+    
+    BUY gdy z-score < -entry_threshold (oversold).
+    SELL gdy z-score > entry_threshold (overbought).
+    Opcjonalny filtr spread/vol.
+    """
+    
+    def __init__(
+        self,
+        period: int = 20,
+        entry_threshold: float = 2.0,
+        exit_threshold: float = 0.0
+    ):
+        if period <= 0:
+            raise ValueError("Period musi być dodatnią liczbą całkowitą")
+        if entry_threshold <= 0:
+            raise ValueError("entry_threshold musi być dodatni")
+        
+        self.period = period
+        self.entry_threshold = entry_threshold
+        self.exit_threshold = exit_threshold
+    
+    @property
+    def name(self) -> str:
+        return f"MRZScore_{self.period}_{self.entry_threshold}"
+    
+    def _calculate_zscore(self, candles: List[Candle]) -> Optional[float]:
+        if len(candles) < self.period:
+            return None
+        
+        closes = [c.close for c in candles[-self.period:]]
+        mean = sum(closes) / self.period
+        variance = sum((x - mean) ** 2 for x in closes) / self.period
+        std = variance ** 0.5
+        
+        if std == 0:
+            return 0.0
+        
+        current_price = candles[-1].close
+        return (current_price - mean) / std
+    
+    def analyze(self, candles: List[Candle]) -> Signal:
+        z_score = self._calculate_zscore(candles)
+        
+        if z_score is None:
+            return Signal.HOLD
+        
+        if z_score < -self.entry_threshold:
+            return Signal.BUY  # Oversold
+        elif z_score > self.entry_threshold:
+            return Signal.SELL  # Overbought
         
         return Signal.HOLD

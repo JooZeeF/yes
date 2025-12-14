@@ -4,14 +4,14 @@ Trading Bot - Profesjonalny bot do tradingu w Pythonie.
 Moduły:
 - bot: Główna logika bota
 - config: Konfiguracja
-- strategy: Strategie tradingowe (SMA, EMA, BB, RSI, MACD, Donchian)
-- indicators: Wskaźniki analizy technicznej
+- strategy: Strategie tradingowe (SMA, EMA, BB, RSI, MACD, Donchian, ADX, Volume)
+- indicators: Wskaźniki analizy technicznej (ADX, SuperTrend, OBV, Keltner)
 - guards: Guardy i filtry bezpieczeństwa
 - validation: Walidacja danych
 - backtest: Backtesting z kosztami
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from .strategy import (
     Signal,
@@ -23,6 +23,9 @@ from .strategy import (
     RSIStrategy,
     DonchianBreakoutStrategy,
     MACDStrategy,
+    ADXTrendStrategy,
+    VolumeBreakoutStrategy,
+    MeanReversionZScoreStrategy,
 )
 
 from .config import TradingConfig
@@ -38,7 +41,9 @@ __all__ = [
     "RSIStrategy",
     "DonchianBreakoutStrategy",
     "MACDStrategy",
+    "ADXTrendStrategy",
+    "VolumeBreakoutStrategy",
+    "MeanReversionZScoreStrategy",
     "TradingConfig",
     "TradingBot",
 ]
-

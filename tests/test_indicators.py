@@ -15,6 +15,15 @@ from trading_bot.indicators import (
     calculate_vwap,
     calculate_z_score,
     detect_volume_spike,
+    calculate_adx,
+    calculate_supertrend,
+    calculate_obv,
+    calculate_obv_slope,
+    calculate_keltner_channel,
+    analyze_price_action,
+    calculate_realized_volatility,
+    calculate_vwap_deviation,
+    calculate_rvol,
 )
 
 
@@ -183,6 +192,130 @@ class TestVolumeSpike(unittest.TestCase):
         
         result = detect_volume_spike(candles, lookback=20, threshold_percentile=90)
         self.assertFalse(result)
+
+
+class TestADX(unittest.TestCase):
+    def test_adx_calculation(self):
+        # Trend wzrostowy
+        prices = list(range(100, 140))
+        candles = create_test_candles(prices)
+        result = calculate_adx(candles, period=14)
+        
+        self.assertIsNotNone(result)
+        self.assertGreater(result.adx, 0)
+        self.assertGreater(result.plus_di, 0)
+    
+    def test_adx_insufficient_data(self):
+        candles = create_test_candles([100, 101, 102])
+        result = calculate_adx(candles, period=14)
+        self.assertIsNone(result)
+
+
+class TestSuperTrend(unittest.TestCase):
+    def test_supertrend_calculation(self):
+        prices = list(range(100, 130))
+        candles = create_test_candles(prices)
+        result = calculate_supertrend(candles, period=10, multiplier=3.0)
+        
+        self.assertIsNotNone(result)
+        self.assertIn(result.direction, [1, -1])
+        self.assertGreater(result.value, 0)
+
+
+class TestOBV(unittest.TestCase):
+    def test_obv_uptrend(self):
+        # Rosnące ceny = rosnący OBV
+        prices = list(range(100, 110))
+        volumes = [1000] * 10
+        candles = create_test_candles(prices, volumes)
+        result = calculate_obv(candles)
+        
+        self.assertIsNotNone(result)
+        self.assertGreater(result, 0)
+    
+    def test_obv_downtrend(self):
+        # Spadające ceny = malejący OBV
+        prices = list(range(110, 100, -1))
+        volumes = [1000] * 10
+        candles = create_test_candles(prices, volumes)
+        result = calculate_obv(candles)
+        
+        self.assertIsNotNone(result)
+        self.assertLess(result, 0)
+
+
+class TestOBVSlope(unittest.TestCase):
+    def test_obv_slope_positive(self):
+        # Rosnący OBV = dodatnie nachylenie
+        prices = list(range(100, 125))
+        volumes = [1000] * 25
+        candles = create_test_candles(prices, volumes)
+        result = calculate_obv_slope(candles, period=10)
+        
+        self.assertIsNotNone(result)
+        self.assertGreater(result, 0)
+
+
+class TestKeltnerChannel(unittest.TestCase):
+    def test_keltner_calculation(self):
+        prices = list(range(100, 130))
+        candles = create_test_candles(prices)
+        result = calculate_keltner_channel(candles, ema_period=10, atr_period=10)
+        
+        self.assertIsNotNone(result)
+        self.assertGreater(result.upper, result.middle)
+        self.assertLess(result.lower, result.middle)
+
+
+class TestPriceAction(unittest.TestCase):
+    def test_uptrend_pattern(self):
+        # Higher highs, higher lows
+        prices = [100, 102, 104, 106, 108]
+        candles = create_test_candles(prices)
+        result = analyze_price_action(candles, lookback=4)
+        
+        self.assertIsNotNone(result)
+        self.assertTrue(result.is_uptrend)
+    
+    def test_downtrend_pattern(self):
+        # Lower highs, lower lows
+        prices = [108, 106, 104, 102, 100]
+        candles = create_test_candles(prices)
+        result = analyze_price_action(candles, lookback=4)
+        
+        self.assertIsNotNone(result)
+        self.assertTrue(result.is_downtrend)
+
+
+class TestRealizedVolatility(unittest.TestCase):
+    def test_realized_vol_calculation(self):
+        prices = list(range(100, 160))
+        candles = create_test_candles(prices)
+        result = calculate_realized_volatility(candles, period=20)
+        
+        self.assertIsNotNone(result)
+        self.assertGreater(result, 0)
+
+
+class TestVWAPDeviation(unittest.TestCase):
+    def test_vwap_deviation(self):
+        prices = [100, 101, 102, 103, 110]  # Ostatnia cena powyżej VWAP
+        candles = create_test_candles(prices)
+        result = calculate_vwap_deviation(candles)
+        
+        self.assertIsNotNone(result)
+        self.assertGreater(result, 0)  # Cena powyżej VWAP
+
+
+class TestRVOL(unittest.TestCase):
+    def test_rvol_high(self):
+        prices = [100] * 26
+        volumes = [1000] * 25 + [5000]  # Ostatni wolumen 5x większy
+        candles = create_test_candles(prices, volumes)
+        result = calculate_rvol(candles, lookback=20)
+        
+        self.assertIsNotNone(result)
+        self.assertGreater(result, 1)  # RVOL > 1
 
 
 if __name__ == "__main__":
