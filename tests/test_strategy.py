@@ -29,6 +29,12 @@ class TestSimpleMovingAverageStrategy(unittest.TestCase):
         
         with self.assertRaises(ValueError):
             SimpleMovingAverageStrategy(short_period=5, long_period=5)
+        
+        with self.assertRaises(ValueError):
+            SimpleMovingAverageStrategy(short_period=0, long_period=5)
+        
+        with self.assertRaises(ValueError):
+            SimpleMovingAverageStrategy(short_period=-1, long_period=5)
     
     def test_hold_signal_insufficient_data(self):
         """Test sygnału HOLD przy niewystarczających danych."""

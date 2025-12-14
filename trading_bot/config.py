@@ -30,13 +30,23 @@ class TradingConfig:
     @classmethod
     def from_env(cls) -> "TradingConfig":
         """Tworzy konfigurację z zmiennych środowiskowych."""
+        try:
+            max_position = float(os.getenv("TRADING_MAX_POSITION", "0.1"))
+            stop_loss = float(os.getenv("TRADING_STOP_LOSS", "2.0"))
+            take_profit = float(os.getenv("TRADING_TAKE_PROFIT", "4.0"))
+        except ValueError:
+            # Użyj wartości domyślnych jeśli zmienne środowiskowe są nieprawidłowe
+            max_position = 0.1
+            stop_loss = 2.0
+            take_profit = 4.0
+        
         return cls(
             api_key=os.getenv("TRADING_API_KEY", ""),
             api_secret=os.getenv("TRADING_API_SECRET", ""),
             symbol=os.getenv("TRADING_SYMBOL", "BTC/USDT"),
             timeframe=os.getenv("TRADING_TIMEFRAME", "1h"),
-            max_position_size=float(os.getenv("TRADING_MAX_POSITION", "0.1")),
-            stop_loss_percent=float(os.getenv("TRADING_STOP_LOSS", "2.0")),
-            take_profit_percent=float(os.getenv("TRADING_TAKE_PROFIT", "4.0")),
+            max_position_size=max_position,
+            stop_loss_percent=stop_loss,
+            take_profit_percent=take_profit,
             dry_run=os.getenv("TRADING_DRY_RUN", "true").lower() == "true",
         )

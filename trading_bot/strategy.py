@@ -65,6 +65,8 @@ class SimpleMovingAverageStrategy(TradingStrategy):
             short_period: Okres krótkiej średniej kroczącej
             long_period: Okres długiej średniej kroczącej
         """
+        if short_period <= 0 or long_period <= 0:
+            raise ValueError("Okresy muszą być dodatnimi liczbami całkowitymi")
         if short_period >= long_period:
             raise ValueError("short_period musi być mniejszy niż long_period")
         self.short_period = short_period
