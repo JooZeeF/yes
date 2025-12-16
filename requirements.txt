@@ -1,0 +1,9 @@
+# Trading Bot Dependencies
+# Podstawowe zależności dla bota do tradingu
+
+# Na razie bot używa tylko biblioteki standardowej Pythona
+# W przyszłości można dodać:
+# ccxt>=4.0.0  # Biblioteka do komunikacji z giełdami
+# pandas>=2.0.0  # Analiza danych
+# numpy>=1.24.0  # Obliczenia numeryczne
+# ta>=0.10.0  # Wskaźniki analizy technicznej
