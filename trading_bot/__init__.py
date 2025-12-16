@@ -9,9 +9,11 @@ Moduły:
 - guards: Guardy i filtry bezpieczeństwa
 - validation: Walidacja danych
 - backtest: Backtesting z kosztami
+- data_provider: Pobieranie danych z BingX API
+- analyze_crash: Analiza zachowania podczas crash events
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 from .strategy import (
     Signal,

@@ -150,27 +150,85 @@ if manager.is_trading_allowed(results):
     pass
 ```
 
+### BingX API - Pobieranie danych
+
+```python
+from trading_bot.data_provider import BingXDataProvider, CSVDataProvider
+from datetime import datetime, timezone, timedelta
+
+# Inicjalizacja providera
+provider = BingXDataProvider(timeout=60)
+
+# Pobierz top 20 coinów po wolumenie
+symbols = provider.get_top_symbols(limit=20)
+for s in symbols:
+    print(f"{s.symbol}: ${s.volume_24h:,.0f}")
+
+# Pobierz dane historyczne
+candles = provider.get_klines(
+    symbol="BTC-USDT",
+    interval="1h",
+    limit=1000
+)
+
+# Lub dla zakresu dat
+end_date = datetime.now(timezone.utc)
+start_date = end_date - timedelta(days=7)
+
+candles = provider.get_klines_range(
+    symbol="BTC-USDT",
+    interval="15m",
+    start_date=start_date,
+    end_date=end_date
+)
+
+# Zapisz do CSV
+CSVDataProvider.save_candles(candles, "btc_data.csv")
+
+# Wczytaj z CSV
+candles = CSVDataProvider.load_candles("btc_data.csv")
+```
+
+### Analiza Flash Crash
+
+```bash
+# Analiza z domyślnymi parametrami (wszystkie 20 coinów, wszystkie timeframe'y)
+python -m trading_bot.analyze_crash
+
+# Analiza ostatnich 7 dni
+python -m trading_bot.analyze_crash --recent-days 7
+
+# Analiza tylko top 5 coinów
+python -m trading_bot.analyze_crash --symbols 5
+
+# Tylko wybrane timeframe'y
+python -m trading_bot.analyze_crash --timeframes 1h 4h 1d
+```
+
 ## Struktura projektu
 
 ```
 trading_bot/
-├── __init__.py    # Pakiet główny
-├── bot.py         # Logika bota
-├── config.py      # Konfiguracja
-├── strategy.py    # Strategie tradingowe (SMA, EMA, BB, RSI, MACD, Donchian)
-├── indicators.py  # Wskaźniki analizy technicznej
-├── guards.py      # Guardy i filtry bezpieczeństwa
-├── validation.py  # Walidacja danych
-└── backtest.py    # Backtesting
+├── __init__.py       # Pakiet główny
+├── bot.py            # Logika bota
+├── config.py         # Konfiguracja
+├── strategy.py       # Strategie tradingowe (SMA, EMA, BB, RSI, MACD, Donchian)
+├── indicators.py     # Wskaźniki analizy technicznej
+├── guards.py         # Guardy i filtry bezpieczeństwa
+├── validation.py     # Walidacja danych
+├── backtest.py       # Backtesting
+├── data_provider.py  # Pobieranie danych (BingX API, CSV)
+└── analyze_crash.py  # Analiza flash crash
 tests/
-├── test_bot.py        # Testy bota
-├── test_strategy.py   # Testy strategii
-├── test_indicators.py # Testy wskaźników
-├── test_guards.py     # Testy guardów
-├── test_validation.py # Testy walidacji
-└── test_backtest.py   # Testy backtestingu
-main.py            # Punkt wejścia
-requirements.txt   # Zależności
+├── test_bot.py           # Testy bota
+├── test_strategy.py      # Testy strategii
+├── test_indicators.py    # Testy wskaźników
+├── test_guards.py        # Testy guardów
+├── test_validation.py    # Testy walidacji
+├── test_backtest.py      # Testy backtestingu
+└── test_data_provider.py # Testy data providera
+main.py               # Punkt wejścia
+requirements.txt      # Zależności
 ```
 
 ## Testy
